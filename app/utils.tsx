@@ -1,5 +1,6 @@
 import { StargateClient } from "@cosmjs/stargate";
 import { CosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import { IBCData } from "@/data/ibc_data";
 
 // Connects to Stargate and CosmWasm clients
 export async function getClients(rpcUrl: string) {
@@ -48,14 +49,38 @@ export async function getWallets(client: CosmWasmClient, codeId: number) {
 }
 
 // Fetches the current price of ARCH token in USD
-export async function getArchPrice() {
+export async function getTokenPrice(chain: string) {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=archway&vs_currencies=usd"
+      "https://api.coingecko.com/api/v3/simple/price?ids=" +
+        chain +
+        "&vs_currencies=usd"
     );
     const data = await response.json();
-    return data.archway.usd;
+    return data[chain]?.usd || 0;
   } catch (error) {
-    console.error("Error fetching ARCH price:", error);
+    console.error("Error fetching price:", error);
   }
+}
+
+export function getDenom(ibcDenom: string): string {
+  const key = ibcDenom + "__archway";
+  const ibcData = IBCData[key];
+  if (ibcData) {
+    return ibcData.denom;
+  }
+  return ibcDenom;
+}
+
+export function getChain(ibcDenom: string): string {
+  if (ibcDenom === "aarch") {
+    return "archway";
+  }
+  const key = ibcDenom + "__archway";
+  const ibcData = IBCData[key];
+  if (ibcData) {
+    return ibcData.chain;
+  }
+  return ibcDenom;
 }

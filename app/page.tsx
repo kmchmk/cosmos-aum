@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  getArchPrice,
+  getTokenPrice,
   getClients,
   getWallets,
   queryTotalBalance,
+  getDenom,
 } from "./utils";
-import { IBCData } from "./../data/ibc_data";
 
 export default function Home() {
   const [rpcURL, setRpcURL] = useState<string>(
@@ -14,21 +14,26 @@ export default function Home() {
   );
   const [codeId, setCodeId] = useState<number>(223);
   const [aum, setAum] = useState<Record<string, number>>({});
-  const [archUSDValue, setArchUSDValue] = useState<number>(0);
+  const [usdValue, setUsdValue] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [archPrice, setArchPrice] = useState<number>(0);
+  const [tokenPrice, setTokenPrice] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const getArchValue = async () => {
-      const aarchTokens = aum["aarch"];
-      if (aum["aarch"]) {
-        const archTokens = aarchTokens / 10 ** 18; // Assuming 18 decimals for ARCH token
-        setArchUSDValue(Math.round(archTokens * archPrice));
-      }
-    };
-    getArchValue();
-  }, [aum, archPrice]);
+    console.log("setting usd value");
+    let totalUsdValue = 0;
+    for (const [denom, amount] of Object.entries(aum)) {
+      const decimals = denom.startsWith("u")
+        ? 6
+        : denom.startsWith("a")
+        ? 18
+        : 0;
+      const tokens = amount / 10 ** decimals;
+      const price = tokenPrice[denom] || 0;
+      totalUsdValue += Math.round(tokens * price);
+    }
+    setUsdValue(totalUsdValue);
+  }, [aum, tokenPrice]);
 
   useEffect(() => {
     queryAssetHandler();
@@ -43,34 +48,32 @@ export default function Home() {
     }
   }, [progress]);
 
-  function getDenom(ibcDenom: string): string {
-    const key = ibcDenom + "__archway";
-    const ibcData = IBCData[key];
-    if (ibcData) {
-      return ibcData.denom;
-    }
-    return ibcDenom;
+  async function updateTokenPrices() {
+    const archPrice = await getTokenPrice("archway");
+    const osmosPrice = await getTokenPrice("osmosis");
+    const atomPrice = await getTokenPrice("cosmos");
+    setTokenPrice({
+      aarch: archPrice,
+      uosmo: osmosPrice,
+      uatom: atomPrice,
+    });
   }
 
   async function queryAssetHandler() {
     setLoading(true);
     setAum({});
-    setArchUSDValue(0);
-    setArchPrice(await getArchPrice());
+    updateTokenPrices();
 
     const { stargateClient, cosmwasmClient } = await getClients(rpcURL);
     const addresses = await getWallets(cosmwasmClient, codeId);
 
-    const batchSize = 10;
+    const batchSize = 5;
     for (let i = 0; i < addresses.length; i += batchSize) {
       const end = Math.min(i + batchSize, addresses.length);
       const batchAddresses = addresses.slice(i, end);
       const response = await queryTotalBalance(stargateClient, batchAddresses);
 
       Object.entries(response).forEach(([denom, amount]) => {
-        if (denom.startsWith("ibc/")) {
-          denom = getDenom(denom);
-        }
         setAum((prev) => ({ ...prev, [denom]: (prev[denom] || 0) + amount }));
       });
 
@@ -113,7 +116,10 @@ export default function Home() {
             <tbody>
               {Object.entries(aum).map(([denom, amount]) => (
                 <tr key={denom}>
-                  <td>{denom}</td>
+                  <td>
+                    {getDenom(denom)} ({tokenPrice[getDenom(denom)] || 0}
+                    {" USD/Token"} )
+                  </td>
                   <td>{amount}</td>
                 </tr>
               ))}
@@ -121,10 +127,10 @@ export default function Home() {
           </table>
         </div>
       )}
-      {archUSDValue > 0 && (
+      {usdValue > 0 && (
         <div>
           <hr />
-          <h1>ARCH value(USD): {archUSDValue}</h1>
+          <h1>Total value(USD): {usdValue}</h1>
         </div>
       )}
       {loading && (

@@ -10,8 +10,9 @@ if [ $? -ne 0 ]; then
 fi
 
 # Filter JSON using jq
-jq 'reduce to_entries[] as $item ({}; if ($item.key | endswith("__archway")) then . + {($item.key): {chain: $item.value.origin.chain, denom: $item.value.origin.denom}} else . end)' /tmp/ibc_data.json > ./data/ibc_data.tsx
+IBC_DATA=$(jq 'reduce to_entries[] as $item ({}; if ($item.key | endswith("__archway")) then . + {($item.key): {chain: $item.value.origin.chain, denom: $item.value.origin.denom}} else . end)' /tmp/ibc_data.json)
 
+echo "export const IBCData: any = " $IBC_DATA > ./data/ibc_data.tsx
 
 
 
