@@ -7,6 +7,7 @@ import {
   queryTotalBalance,
   getDenom,
 } from "./utils";
+import { denoms } from "./constants";
 
 export default function Home() {
   const [rpcURL, setRpcURL] = useState<string>(
@@ -23,11 +24,7 @@ export default function Home() {
     console.log("setting usd value");
     let totalUsdValue = 0;
     for (const [denom, amount] of Object.entries(aum)) {
-      const decimals = denom.startsWith("u")
-        ? 6
-        : denom.startsWith("a")
-        ? 18
-        : 0;
+      const decimals = denoms[denom]?.decimals || 0;
       const tokens = amount / 10 ** decimals;
       const price = tokenPrice[denom] || 0;
       totalUsdValue += Math.round(tokens * price);
@@ -49,14 +46,10 @@ export default function Home() {
   }, [progress]);
 
   async function updateTokenPrices() {
-    const archPrice = await getTokenPrice("archway");
-    const osmosPrice = await getTokenPrice("osmosis");
-    const atomPrice = await getTokenPrice("cosmos");
-    setTokenPrice({
-      aarch: archPrice,
-      uosmo: osmosPrice,
-      uatom: atomPrice,
-    });
+    for (const [denom, config] of Object.entries(denoms)) {
+      const price = await getTokenPrice(config.chain);
+      setTokenPrice((prev) => ({ ...prev, [denom]: price }));
+    }
   }
 
   async function queryAssetHandler() {

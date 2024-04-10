@@ -1,4 +1,4 @@
-import { StargateClient } from "@cosmjs/stargate";
+import { Coin, StargateClient } from "@cosmjs/stargate";
 import { CosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { IBCData } from "@/data/ibc_data";
 
@@ -12,7 +12,15 @@ export async function getClients(rpcUrl: string) {
 // Queries balance for a specific address
 export async function queryBalance(client: StargateClient, address: string) {
   try {
-    const balanceResponse = await client.getAllBalances(address);
+    let balanceResponse: Coin[] = [];
+    const unstakedBalances = await client.getAllBalances(address);
+    unstakedBalances.forEach((balance) => {
+      balanceResponse.push(balance);
+    });
+    const stakedBalance = await client.getBalanceStaked(address);
+    if (stakedBalance) {
+      balanceResponse.push(stakedBalance);
+    }
     return balanceResponse;
   } catch (error) {
     console.error("Error querying balance:", error);

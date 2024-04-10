@@ -23,3 +23,4 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Filtered JSON file has been saved to ./data/ibc_data.tsx"
+echo "Please format the file using Prettier before committing it to the repository."
