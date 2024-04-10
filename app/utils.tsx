@@ -69,6 +69,7 @@ export async function getTokenPrice(chain: string) {
     return data[chain]?.usd || 0;
   } catch (error) {
     console.error("Error fetching price:", error);
+    return 0;
   }
 }
 

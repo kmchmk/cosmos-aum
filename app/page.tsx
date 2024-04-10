@@ -21,15 +21,15 @@ export default function Home() {
   const [tokenPrice, setTokenPrice] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    console.log("setting usd value");
     let totalUsdValue = 0;
-    for (const [denom, amount] of Object.entries(aum)) {
+    for (const [ibcDenom, amount] of Object.entries(aum)) {
+      const denom = getDenom(ibcDenom);
       const decimals = denoms[denom]?.decimals || 0;
       const tokens = amount / 10 ** decimals;
       const price = tokenPrice[denom] || 0;
-      totalUsdValue += Math.round(tokens * price);
+      totalUsdValue += tokens * price;
     }
-    setUsdValue(totalUsdValue);
+    setUsdValue(Math.round(totalUsdValue));
   }, [aum, tokenPrice]);
 
   useEffect(() => {
@@ -66,8 +66,11 @@ export default function Home() {
       const batchAddresses = addresses.slice(i, end);
       const response = await queryTotalBalance(stargateClient, batchAddresses);
 
-      Object.entries(response).forEach(([denom, amount]) => {
-        setAum((prev) => ({ ...prev, [denom]: (prev[denom] || 0) + amount }));
+      Object.entries(response).forEach(([ibcDenom, amount]) => {
+        setAum((prev) => ({
+          ...prev,
+          [ibcDenom]: (prev[ibcDenom] || 0) + amount,
+        }));
       });
 
       setProgress(Math.round((end * 100) / addresses.length));
@@ -107,11 +110,15 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(aum).map(([denom, amount]) => (
-                <tr key={denom}>
+              {Object.entries(aum).map(([ibcDenom, amount]) => (
+                <tr key={ibcDenom}>
                   <td>
-                    {getDenom(denom)} ({tokenPrice[getDenom(denom)] || 0}
-                    {" USD/Token"} )
+                    {getDenom(ibcDenom)}
+                    {tokenPrice[getDenom(ibcDenom)] ? (
+                      <div>({tokenPrice[getDenom(ibcDenom)]} USD/Token)</div>
+                    ) : (
+                      <div>{"(fetching price...)"}</div>
+                    )}
                   </td>
                   <td>{amount}</td>
                 </tr>

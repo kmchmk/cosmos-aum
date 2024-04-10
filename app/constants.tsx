@@ -31,4 +31,8 @@ export const denoms: { [key: string]: { chain: string; decimals: number } } = {
     chain: "axelar",
     decimals: 6,
   },
+  unibi: {
+    chain: "nibiru",
+    decimals: 6,
+  },
 };
